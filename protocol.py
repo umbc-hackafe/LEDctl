@@ -1,5 +1,6 @@
 import struct
 import abc
+import itertools
 
 class InappropriateValueError(Exception): pass
 
@@ -54,6 +55,25 @@ class Light(object):
         without the Light's ID number."""
         return struct.pack("!BBBB", self.red, self.green, self.blue,
                 self.intensity)
+
+class RefreshMessage(Message):
+    _id_ = 0
+
+    def __init__(self, startid, lights):
+        if type(startid) != int or startid >= (1 << 6):
+            raise InappropriateValueError("invalid startid %s" %
+                    startid)
+
+        self.startid = startid
+        self.lights = lights
+
+    # XXX: This is really inefficient.
+    def serialize_internals(self):
+        serialized_lights = bytes()
+        for light in self.lights:
+            serialized_lights += light.serialize_anonymous()
+
+        return struct.pack("!B", self.startid) + serialized_lights
 
 class ModifyMessage(Message):
     class MissingLightIDError(Exception): pass
